@@ -73,8 +73,8 @@ class ForkParams:
 
 
 class RemoteInfo:
-  def __init__(self, fork_name, username_aliases, default_branch):
-    self.username = None  # to be added by Fork.__get_remote_info function
+  def __init__(self, username, fork_name, username_aliases, default_branch):
+    self.username = username
     self.fork_name = fork_name
     self.username_aliases = username_aliases
     self.default_branch = default_branch
@@ -88,13 +88,16 @@ class Fork(CommandBase):
 
     self.fork_params = ForkParams()
     default_commaai_branch = 'release2' if EON else 'release3'
-    self.remote_defaults = {
-      'commaai': RemoteInfo('openpilot', ['stock', 'origin'], default_commaai_branch),
-      'dragonpilot-community': RemoteInfo('dragonpilot', ['dragonpilot'], 'devel-i18n')  # devel-i18n isn't most stable, but its name remains the same
-    }
+    self.remote_defaults = [
+      # The first item in this list is the comma default branch.
+      RemoteInfo('commaai', 'openpilot', ['stock', 'origin'], default_commaai_branch),
+      RemoteInfo('dragonpilot-community', 'dragonpilot', ['dragonpilot'], 'devel-i18n'),  # devel-i18n isn't most stable, but its name remains the same
+      RemoteInfo('terminator', 'sunnypilot', ['terminator-sunny'], 'sunny-kia-ceed-sw-phev-2022-non-scc'),
+      RemoteInfo('terminator', 'openpilot', ['terminator-openpilot'], 'kia-ceed-sw-phev-2022-non-scc'),
+    ]
 
     self.comma_origin_name = 'commaai'
-    self.comma_default_branch = self.remote_defaults['commaai'].default_branch
+    self.comma_default_branch = self.remote_defaults[0].default_branch
 
     self.commands = {'switch': Command(description='🍴 Switch between any openpilot fork',
                                        flags=[Flag('username', '👤 The username of the fork\'s owner to switch to, will use current fork if not provided', required=False, dtype='str'),
@@ -142,9 +145,6 @@ class Fork(CommandBase):
         print()
     else:
       specified_fork = specified_fork.lower()
-      remote_info = self.__get_remote_info(specified_fork)
-      if remote_info is not None:  # there's an overriding default username available
-        specified_fork = remote_info.username
       if specified_fork not in installed_forks:
         error('{} not an installed fork! Try installing it with the {}switch{} command'.format(specified_fork, COLORS.CYAN, COLORS.RED))
         return
@@ -181,20 +181,15 @@ class Fork(CommandBase):
         return
 
     username = username.lower()
-    remote_info = self.__get_remote_info(username)
-    if remote_info is not None:  # user entered an alias (ex. stock, dragonpilot)
-      username = remote_info.username
 
     installed_forks = self.fork_params.get('installed_forks')
     fork_in_params = True
     if username not in installed_forks:
       fork_in_params = False
-      if remote_info is not None:
-        remote_url = f'https://github.com/{username}/{remote_info.fork_name}'  # dragonpilot doesn't have a GH redirect
-      else:  # for most forks, GH will redirect from /openpilot if user renames fork
-        if repo_name is None:
-          repo_name = DEFAULT_REPO_NAME  # openpilot
-        remote_url = f'https://github.com/{username}/{repo_name}'
+      # for most forks, GH will redirect from /openpilot if user renames fork
+      if repo_name is None:
+        repo_name = DEFAULT_REPO_NAME  # openpilot
+      remote_url = f'https://github.com/{username}/{repo_name}'
 
       if not valid_fork_url(remote_url):
         error('Invalid username{}! {} does not exist'.format('' if flags.repo is None else ' or repository name', remote_url))
@@ -234,12 +229,8 @@ class Fork(CommandBase):
       return
 
     if branch is None:  # user hasn't specified a branch, use remote's default branch
-      if remote_info is not None:  # there's an overriding default branch specified
-        remote_branch = remote_info.default_branch
-        local_branch = '{}_{}'.format(remote_info.username, remote_branch)
-      else:
-        remote_branch = default_remote_branch  # for command to checkout correct branch from remote, branch is previously None since user didn't specify
-        local_branch = '{}_{}'.format(username, default_remote_branch)
+      remote_branch = default_remote_branch  # for command to checkout correct branch from remote, branch is previously None since user didn't specify
+      local_branch = '{}_{}'.format(username, default_remote_branch)
     else:
       if branch not in remote_branches:
         close_branches = most_similar(branch, remote_branches)  # remote_branches is gauranteed to have at least 1 branch
@@ -327,15 +318,6 @@ class Fork(CommandBase):
       else:
         error('Please try again, something went wrong:')
         print(r.output)
-
-  def __get_remote_info(self, username):
-    for default_username in self.remote_defaults:
-      remote_info = self.remote_defaults[default_username]
-      remote_info.username = default_username  # add dict key to class instance so we don't have to return a tuple
-      remote_info.username_aliases.append(default_username)  # so default branch works when user enters the actual name
-      if username in remote_info.username_aliases:
-        return remote_info
-    return None
 
   @staticmethod
   def __get_remote_branches(r):
