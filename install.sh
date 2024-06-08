@@ -14,8 +14,9 @@
 #                 \
 #                 /
 
-# This is the install script for https://emu.sh/
-# Located on git at https://github.com/emu-sh/.oh-my-comma
+# This is the unofficial install script for TerminatorNL's fork of https://emu.sh/
+# Located on git at https://github.com/TerminatorNL/.oh-my-comma
+# The official repo is located at https://github.com/emu-sh/.oh-my-comma
 # To install this, ssh into your comma device and paste:
 # bash <(curl -fsSL install.emu.sh) # the brain of the bird
 # source $SYSTEM_BASHRC_PATH depending on system
@@ -31,7 +32,10 @@ COMMUNITY_PATH=/data/community
 COMMUNITY_BASHRC_PATH=/data/community/.bashrc
 OH_MY_COMMA_PATH=/data/community/.oh-my-comma
 GIT_BRANCH_NAME=master
-GIT_REMOTE_URL=https://github.com/emu-sh/.oh-my-comma.git
+
+# WARNING: THIS IS NOT THE OFFICIAL DISTRIBUTION OF EMU! 
+# Refer to the official repo at https://github.com/emu-sh/.oh-my-comma
+GIT_REMOTE_URL=https://github.com/TerminatorNL/.oh-my-comma.git
 OMC_VERSION=0.1.17
 
 install_echo() {  # only prints if not updating
